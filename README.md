@@ -1,23 +1,32 @@
-# ADMM
-With the help of the code of the paper "An Alternating Direction Method of Multiplier Based Problem Decomposition Scheme for Iteratively Improving Primal and Dual Solution Quality in Vehicle Routing Problem", it is applied to the VRPTW problem, joint optimization of honey peach picking and distribution.
-
-## ADMM
- ADMM can be used to optimize a K-vehicles VRP problem from an infeasible solution to a feasible solution through iterations. It decomposes the whole large-scale problem into K independent VRP which can be easily solved by using K FDP.
- 
- ## CalculateCostForVehicle
- This function is used to calculate primal cost for each vehicle in a single iteration. Input visitedSeq should be a [K, s] matrix. Output visitedNode is a [K, s+1] matrix. The (s+1)th column stores the total primal cost.
- 
- ## FDP
- FDP is used to generate single vehicle least cost routing.
- 
- ## FeasibleSolution
- Generate final visited sequence and time sequence for each vehicle. Suggest to use this function after program has been converged. When the result of the program is unfeasible, make it feasible.
- 
- ## GeneralizedCostMatrix
- According to cost matrix C and other parameters, use objective function 2 to generate generalized cost matrix GC.
- 
- ## GenerateFreshness
- According to the final visited sequence and corresponding time sequence, generate variable freshness for each vehicle. And calculate its freshness deviation.
- 
- ## GenerateRandomTime
- Generate random delivery time in timeRange for each customers. Output matrix B is a (space nodes\*space nodes) matrix, including beginning node and end node.
+# ADMM应用于水蜜桃采摘配送联合优化问题
+## 介绍
+- Augmented Lagrangian relaxation(ALR)：增广拉格朗日松弛，在拉格朗日松弛的基础上加上一个二次惩罚项，增加了解法的鲁棒性，使得转换后的问题更容易求解。
+- Block coordinate descent method：块坐标下降法，算法在迭代的过程中，沿着某一个坐标的方向进行一维搜索，寻找函数的一个局部极小值，
+整个过程中循环搜索不同的坐标方向。
+- Alternating Direction Method of Multiplier(ADMM)：ADMM可用于迭代优化K辆车的VRPTW问题，使得从不可行解收敛到可行，它把原问题分解成关于
+每辆车的子问题，使得子问题可以调用向前动态规划算法求解。
+## 技术用途
+- 可应用于VRPTW(Vehicle Routing Problem with Time Window)问题。
+## 方法实现
+- FDP：维护一个(K, S, T)的矩阵，K为参与考虑的方案数，S为需求点的个数，T为时间。状态为当前时刻t，前K个最优的配送方案，状态转移为当前时刻t，考虑前
+K个最优配送方案，对于每一方案都可以选择任意未服务过的客户，到达t+t(i)时刻，t(i)表示从当前服务点出发，到达选择的新客户i服务点的时间花费，然后跳到t+1
+时刻，每个时刻t只考虑前K个最优配送方案。定义初始状态，所有车辆都从同一个起始点出发，从时刻0开始出发。
+- ADMM：首先初始化原问题的上界和下界、拉格朗日乘子、二次项参数和每辆车对应的配送方案等变量，开始循环，固定其他车辆的配送路径，对K辆车先后调用FDP
+求出其最小成本的配送路径，更新乘子和惩罚项参数，然后生成上下界并更新。
+- CalculateCostForVehicle：在某一个迭代轮次，根据当前车队的配送方案，计算出每一辆车的原始成本。
+- FeasibleSolution:解的可行化。主要用于迭代轮次结束以后解还未收敛至可行解，则可行化该不可行解。若有某服务点被两辆车服务了两次，则保留第二辆车的服务，
+修改第一辆车的配送，若有客户未被服务，则指派一辆备用的车辆为该客户服务。
+- GeneralizedCostMatrix:生成广义成本矩阵，把迟到产生的费用加入到原成本矩阵，即允许迟到，但是会产生惩罚费用。
+- GenerateFreshness：为每辆车选择最优的水果新鲜度，使得水果在配送至客户处时最接近客户要求的品质。已知每辆车配送方案的前提下，循环尝试每种新鲜度
+可以使得每辆车对其服务客户的新鲜度偏差最小，选择对应新鲜度。
+## 实验结果展示
+输出程序结果并制作图像：  
+![ADMM](https://github.com/FFFjx/ADMM/blob/main/ADMM.png)  
+左图为UB和LB随着迭代次数的变化，右图为未服务的顾客数随着迭代次数的变化。从右图可以看出随着迭代轮次的增加，未服务的顾客数从最大值逐渐下降，到约第32
+轮次时收敛至0，说明程序逐渐从刚迭代时得到的全部顾客都未服务的不可行解，随着迭代轮次的增加，到收敛时可以得到一个全部顾客都满足需求的可行解。
+由左图可以看出随着迭代轮次的增加，上界逐渐下降，下界逐渐上升，解的质量随着迭代轮次的增加而增加。结合上述结论，随着迭代轮次的增加至程序收敛时，
+可以得到一个较好的可行解（或未收敛时得到一个近似较优解）。
+另附一份 算例说明.doc 证明经过迭代：1.ADMM逐渐把不可行解转化为可行解；2.解会被不断优化，直至收敛。
+## 参考论文
+[1] Y.Yao, X.Zhu, H.Dong, S.Wu, H.Wu, L.C.Tong and X.Zhou, "ADMM-based Problem Decomposition Scheme for Vehicle Routing 
+Problem with Time Windows," Transportation Research Part B:Methodological, vol. 129, no. 19, pp. 156-174, 2019.
